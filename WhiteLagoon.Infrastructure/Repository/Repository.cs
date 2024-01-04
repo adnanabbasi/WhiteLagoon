@@ -24,42 +24,54 @@ namespace WhiteLagoon.Infrastructure.Repository
             return dbSet.Any(filter);
         }
 
-        public T Get(Expression<Func<T, bool>> filter, string? includeProperties = null)
+        public T Get(Expression<Func<T, bool>> filter, string? includeProperties = null, bool tracked = false)
         {
-            IQueryable<T> query = dbSet;
-
+            IQueryable<T> query;
+            if (tracked)
+            {
+                query = dbSet;
+            }
+            else
+            {
+                query = dbSet.AsNoTracking();
+            }
             if (filter != null)
             {
                 query = query.Where(filter);
             }
-
             if (!string.IsNullOrEmpty(includeProperties))
             {
-                //Villa, VillaNumber -- case sensitive
-                foreach (var includeProperty in includeProperties
+                //Villa,VillaNumber -- case sensitive
+                foreach (var includeProp in includeProperties
                     .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    query = query.Include(includeProperty);
+                    query = query.Include(includeProp);
                 }
             }
             return query.FirstOrDefault();
         }
 
-        public IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter = null, string? includeProperties = null)
+        public IEnumerable<T> GetAll(Expression<Func<T, bool>>? filter = null, string? includeProperties = null, bool tracked = false)
         {
-            IQueryable<T> query = dbSet;
-
+            IQueryable<T> query;
+            if (tracked)
+            {
+                query = dbSet;
+            }
+            else
+            {
+                query = dbSet.AsNoTracking();
+            }
             if (filter != null)
             {
                 query = query.Where(filter);
             }
-
             if (!string.IsNullOrEmpty(includeProperties))
             {
-                foreach (var includeProperty in includeProperties
+                foreach (var includeProp in includeProperties
                     .Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                 {
-                    query = query.Include(includeProperty);
+                    query = query.Include(includeProp);
                 }
             }
             return query.ToList();
