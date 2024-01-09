@@ -1,19 +1,18 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Syncfusion.Presentation;
-using WhiteLagoon.Application.Common.Interfaces;
-using WhiteLagoon.Application.Common.Utility;
+using WhiteLagoon.Application.Services.Interface;
 using WhiteLagoon.Web.ViewModels;
 
 namespace WhiteLagoon.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly IVillaService _villaService;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public HomeController(IUnitOfWork unitOfWork, IWebHostEnvironment webHostEnvironment)
+        public HomeController(IVillaService villaService, IWebHostEnvironment webHostEnvironment)
         {
-            _unitOfWork = unitOfWork;
+            _villaService = villaService;
             _webHostEnvironment = webHostEnvironment;
         }
 
@@ -21,36 +20,21 @@ namespace WhiteLagoon.Web.Controllers
         {
             HomeVM homeVM = new()
             {
-                VillaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity"),
+                VillaList = _villaService.GetAllVillas(),
                 Nights = 1,
-                //CheckInDate = DateOnly.FromDateTime(DateTime.Now),
                 CheckInDate = DateTime.Now,
             };
-
             return View(homeVM);
         }
 
         [HttpPost]
         public IActionResult GetVillasByDate(int nights, DateTime checkInDate)
         {
-            var villaList = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").ToList();
-            var villaNumbersList = _unitOfWork.VillaNumber.GetAll().ToList();
-            var bookedVillas = _unitOfWork.Booking.GetAll(u => u.Status == SD.StatusApproved ||
-            u.Status == SD.StatusCheckedIn).ToList();
-
-
-            foreach (var villa in villaList)
-            {
-                int roomAvailable = SD.VillaRoomsAvailable_Count
-                    (villa.Id, villaNumbersList, checkInDate, nights, bookedVillas);
-
-                villa.IsAvailable = roomAvailable > 0 ? true : false;
-            }
 
             HomeVM homeVM = new()
             {
                 CheckInDate = checkInDate,
-                VillaList = villaList,
+                VillaList = _villaService.GetVillasAvailabilityByDate(nights, checkInDate),
                 Nights = nights
             };
 
@@ -60,7 +44,7 @@ namespace WhiteLagoon.Web.Controllers
         [HttpPost]
         public IActionResult GeneratePPTExport(int id)
         {
-            var villa = _unitOfWork.Villa.GetAll(includeProperties: "VillaAmenity").FirstOrDefault(x => x.Id == id);
+            var villa = _villaService.GetVillaById(id);
             if (villa is null)
             {
                 return RedirectToAction(nameof(Error));
@@ -104,6 +88,7 @@ namespace WhiteLagoon.Web.Controllers
                 shape.TextBody.Text = string.Format("USD {0}/night", villa.Price.ToString("C"));
             }
 
+
             shape = slide.Shapes.FirstOrDefault(u => u.ShapeName == "txtVillaAmenitiesHeading") as IShape;
             if (shape is not null)
             {
@@ -127,7 +112,7 @@ namespace WhiteLagoon.Web.Controllers
             }
 
             shape = slide.Shapes.FirstOrDefault(u => u.ShapeName == "imgVilla") as IShape;
-            if(shape is not null) 
+            if (shape is not null)
             {
                 byte[] imageData;
                 string imageUrl;
@@ -144,13 +129,17 @@ namespace WhiteLagoon.Web.Controllers
                 slide.Shapes.Remove(shape);
                 using MemoryStream imageStream = new(imageData);
                 IPicture newPicture = slide.Pictures.AddPicture(imageStream, 60, 120, 300, 200);
+
             }
+
 
 
             MemoryStream memoryStream = new();
             presentation.Save(memoryStream);
             memoryStream.Position = 0;
             return File(memoryStream, "application/pptx", "villa.pptx");
+
+
         }
 
         public IActionResult Privacy()

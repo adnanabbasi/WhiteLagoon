@@ -32,8 +32,13 @@ builder.Services.Configure<IdentityOptions>(option =>
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
-
 builder.Services.AddScoped<IDbInitializer, DbInitializer>();
+
+builder.Services.AddScoped<IVillaService, VillaService>();
+builder.Services.AddScoped<IVillaNumberService, VillaNumberService>();
+builder.Services.AddScoped<IAmenityService, AmenityService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
+
 var app = builder.Build();
 StripeConfiguration.ApiKey = builder.Configuration.GetSection("Stripe:SecretKey").Get<string>();
 
